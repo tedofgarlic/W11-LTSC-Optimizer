@@ -1,0 +1,61 @@
+# Logs and output
+*.log
+*.out
+*.txt
+
+# System files
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+.vim/
+
+# PowerShell
+*.ps1~
+*.psm1~
+PSScriptAnalyzerResults.xml
+
+# Windows files
+$RECYCLE.BIN/
+ehthumbs.db
+desktop.ini
+
+# User-specific
+.env
+.env.local
+secrets/
+.config/
+
+# Build output
+dist/
+build/
+output/
+
+# Test artifacts
+test-results/
+coverage/
+*.trx
+
+# Dependencies
+node_modules/
+pip-cache/
+packages/
+
+# Backup files
+backup/
+*.backup
+*.old
+
+# Optimization output
+optimization-logs/
+system-reports/

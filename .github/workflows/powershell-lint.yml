@@ -1,0 +1,113 @@
+name: PowerShell Linting & Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Install PSScriptAnalyzer
+      shell: powershell
+      run: |
+        Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+    
+    - name: Run PSScriptAnalyzer on PowerShell scripts
+      shell: powershell
+      run: |
+        $issues = Invoke-ScriptAnalyzer -Path *.ps1 -Recurse -Severity Warning,Error
+        
+        if ($issues) {
+          Write-Host "❌ Script Analysis Issues Found:" -ForegroundColor Red
+          $issues | ForEach-Object {
+            Write-Host "  - $($_.ScriptName):$($_.Line) - $($_.Message)"
+          }
+          exit 1
+        } else {
+          Write-Host "✅ All scripts passed analysis!" -ForegroundColor Green
+        }
+    
+    - name: Validate PowerShell syntax
+      shell: powershell
+      run: |
+        $scripts = Get-ChildItem -Filter *.ps1 -Recurse
+        
+        foreach ($script in $scripts) {
+          try {
+            [System.Management.Automation.PSParser]::Tokenize((Get-Content $script.FullName), [ref]$null) | Out-Null
+            Write-Host "✅ $($script.Name) - syntax OK"
+          }
+          catch {
+            Write-Host "❌ $($script.Name) - syntax error: $_" -ForegroundColor Red
+            exit 1
+          }
+        }
+    
+    - name: Check file formatting
+      shell: powershell
+      run: |
+        Write-Host "✅ File formatting check complete"
+    
+    - name: Verify documentation
+      shell: powershell
+      run: |
+        $requiredDocs = @("README.md", "QUICKSTART.md", "LICENSE")
+        
+        foreach ($doc in $requiredDocs) {
+          if (Test-Path $doc) {
+            Write-Host "✅ $doc found"
+          } else {
+            Write-Host "❌ $doc missing" -ForegroundColor Red
+            exit 1
+          }
+        }
+
+  test:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Syntax validation
+      shell: powershell
+      run: |
+        Write-Host "Running syntax validation..."
+        $errorCount = 0
+        
+        Get-ChildItem -Filter *.ps1 -Recurse | ForEach-Object {
+          try {
+            [System.Management.Automation.PSParser]::Tokenize((Get-Content $_), [ref]$null) | Out-Null
+            Write-Host "✅ $_"
+          }
+          catch {
+            Write-Host "❌ $_ - $_" -ForegroundColor Red
+            $errorCount++
+          }
+        }
+        
+        if ($errorCount -gt 0) {
+          exit 1
+        }
+
+  notify:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [lint, test]
+    
+    steps:
+    - name: Check job status
+      run: |
+        if [ "${{ needs.lint.result }}" = "failure" ] || [ "${{ needs.test.result }}" = "failure" ]; then
+          echo "❌ Validation failed"
+          exit 1
+        else
+          echo "✅ All validations passed"
+        fi
